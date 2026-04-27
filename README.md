@@ -1,18 +1,44 @@
-# Unity-style Three.js Grid Environment
+# The SandBox
 
-A clean Unity-like starter scene for GitHub Pages and iPhone.
+A Unity-style Three.js grid environment for GitHub Pages and iPhone.
 
-## Features
+## What it does
 
 - Full-screen Three.js viewport
-- Unity-style 100m x 100m grid
-- 1 Three.js unit = 1 Unity-style metre
+- 100m x 100m Unity-style grid
+- 1 Three.js unit = 1 metre
 - Default sky
 - Sun + hemisphere lighting
 - Shadows
+- Tap a grid square to make it active
+- Slide-out **Tools** sidebar
+- **Add > Mesh > Block** tool
+- Tap to place snap blocks
+- Blocks stack upward
 - Orbit / pinch / pan touch controls
 - Reset, top view, and grid toggle buttons
 - No build step needed
+
+## Block snap system
+
+The grid uses a simple Unity-style metre scale:
+
+```text
+1 normal grid square = 1m x 1m
+1 square is split into 5 mini-slots per direction
+1 snap step = 0.2m
+1 block = 0.2m x 0.2m x 0.2m
+```
+
+That means:
+
+```text
+5 blocks wide = 1m
+5 blocks deep = 1m
+5 blocks high = 1m
+```
+
+So if you fill a 5 x 5 footprint and stack it 5 rows high, it forms one solid 1m cube.
 
 ## Files
 
@@ -20,9 +46,10 @@ A clean Unity-like starter scene for GitHub Pages and iPhone.
 index.html
 styles.css
 main.js
+README.md
 ```
 
-## How to use on GitHub Pages
+## Upload to GitHub Pages
 
 1. Create a new GitHub repo.
 2. Upload these files to the repo root.
@@ -33,16 +60,42 @@ main.js
 
 ## Controls
 
+- Tap: select/place
 - 1 finger drag: orbit
 - Pinch: zoom
 - 2 finger drag: pan
 
-## Scale
+## Tiny debug API
 
-This starter treats:
+Open the browser console and use:
 
-```text
-1 Three.js unit = 1 metre
+```js
+theSandBox.getActiveCell()
+theSandBox.getActiveSnap()
+theSandBox.getBlocks()
+theSandBox.clearBlocks()
+theSandBox.setTool('block')
+theSandBox.setTool('select')
+theSandBox.selectCellByIndex(50, 50)
 ```
 
-So the grid is roughly like a 100m x 100m Unity test area.
+## Changing block size later
+
+In `main.js`, the block size is controlled here:
+
+```js
+const SNAP_DIVISIONS_PER_CELL = 5;
+const SNAP_SIZE = CELL_SIZE / SNAP_DIVISIONS_PER_CELL;
+
+const BLOCK_SIZE_X = SNAP_SIZE;
+const BLOCK_SIZE_Y = SNAP_SIZE;
+const BLOCK_SIZE_Z = SNAP_SIZE;
+```
+
+For a brick shape like `0.4 x 0.2 x 0.2`, change:
+
+```js
+const BLOCK_SIZE_X = SNAP_SIZE * 2;
+const BLOCK_SIZE_Y = SNAP_SIZE;
+const BLOCK_SIZE_Z = SNAP_SIZE;
+```

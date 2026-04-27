@@ -3,23 +3,54 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { Sky } from 'three/addons/objects/Sky.js';
 
 /*
-  Unity-style starter environment for GitHub Pages + iPhone.
+  The SandBox
+  Unity-style Three.js grid environment for GitHub Pages + iPhone.
 
-  Scene scale:
+  Scale:
   - 1 Three.js unit = 1 Unity-style metre.
   - Main grid is 100m x 100m.
-  - Grid divisions are 1m each.
+  - Each normal grid square is 1m x 1m.
+  - The Block tool divides each 1m square into 5 snap points.
+  - So each Block is 0.2m x 0.2m x 0.2m.
+  - 5 blocks wide, 5 blocks deep, and 5 blocks high = one solid 1m cube.
+
+  If you want brick proportions later, change BLOCK_SIZE_X to 0.4 while keeping SNAP_SIZE at 0.2.
 */
 
 const GRID_SIZE = 100;
 const GRID_DIVISIONS = 100;
+const CELL_SIZE = GRID_SIZE / GRID_DIVISIONS;
+const HALF_GRID = GRID_SIZE / 2;
+
+const SNAP_DIVISIONS_PER_CELL = 5;
+const SNAP_SIZE = CELL_SIZE / SNAP_DIVISIONS_PER_CELL;
+
+const BLOCK_SIZE_X = SNAP_SIZE;
+const BLOCK_SIZE_Y = SNAP_SIZE;
+const BLOCK_SIZE_Z = SNAP_SIZE;
+
+const ToolMode = {
+  SELECT: 'select',
+  BLOCK: 'block'
+};
+
+let currentTool = ToolMode.SELECT;
 
 const app = document.querySelector('#app');
+const activeSquareLabel = document.querySelector('#activeSquareLabel');
+const toolStatusLabel = document.querySelector('#toolStatusLabel');
+
+const toolsToggleBtn = document.querySelector('#toolsToggleBtn');
+const toolsPanel = document.querySelector('#toolsPanel');
+const closeToolsBtn = document.querySelector('#closeToolsBtn');
+const blockToolBtn = document.querySelector('#blockToolBtn');
+const cancelToolBtn = document.querySelector('#cancelToolBtn');
+const clearBlocksBtn = document.querySelector('#clearBlocksBtn');
 
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xbfd7ff);
 
-// Camera: similar to opening a clean Unity scene and orbiting around the origin.
+// Camera
 const camera = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
@@ -46,7 +77,7 @@ app.appendChild(renderer.domElement);
 
 // Mobile-friendly orbit controls.
 // iPhone gestures:
-// - 1 finger = orbit
+// - 1 finger drag = orbit
 // - pinch = zoom
 // - 2 fingers = pan
 const controls = new OrbitControls(camera, renderer.domElement);
@@ -61,10 +92,11 @@ controls.update();
 
 // Unity-like grid
 const grid = new THREE.GridHelper(GRID_SIZE, GRID_DIVISIONS, 0x444444, 0x888888);
-grid.position.y = 0.01;
+grid.position.y = 0.015;
 scene.add(grid);
 
-// Slight ground plane below the grid so it feels like Unity's default workspace.
+// Ground plane below the grid.
+// This is also what the raycaster hits when you tap.
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE),
   new THREE.MeshStandardMaterial({
@@ -78,7 +110,7 @@ ground.position.y = 0;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// World axes marker: red X, green Y, blue Z, like most game/editor spaces.
+// World axes marker: red X, green Y, blue Z.
 const axes = new THREE.AxesHelper(5);
 axes.position.y = 0.03;
 scene.add(axes);
@@ -125,27 +157,49 @@ sunLight.shadow.camera.top = 70;
 sunLight.shadow.camera.bottom = -70;
 scene.add(sunLight);
 
-// A simple cube at origin, like Unity's starter test object.
-// Delete this later when you start placing your own level pieces.
-const starterCube = new THREE.Mesh(
-  new THREE.BoxGeometry(2, 2, 2),
-  new THREE.MeshStandardMaterial({
-    color: 0xd9d9d9,
-    roughness: 0.65
+// Active 1m grid-square highlight.
+const activeSquare = new THREE.Mesh(
+  new THREE.PlaneGeometry(CELL_SIZE, CELL_SIZE),
+  new THREE.MeshBasicMaterial({
+    color: 0xffd34d,
+    transparent: true,
+    opacity: 0.34,
+    side: THREE.DoubleSide,
+    depthWrite: false
   })
 );
-starterCube.position.set(0, 1, 0);
-starterCube.castShadow = true;
-starterCube.receiveShadow = true;
-scene.add(starterCube);
+activeSquare.rotation.x = -Math.PI / 2;
+activeSquare.position.y = 0.045;
+activeSquare.visible = false;
+scene.add(activeSquare);
 
-// Soft origin marker ring
+const borderPoints = [
+  new THREE.Vector3(-CELL_SIZE / 2, 0, -CELL_SIZE / 2),
+  new THREE.Vector3(CELL_SIZE / 2, 0, -CELL_SIZE / 2),
+  new THREE.Vector3(CELL_SIZE / 2, 0, CELL_SIZE / 2),
+  new THREE.Vector3(-CELL_SIZE / 2, 0, CELL_SIZE / 2),
+  new THREE.Vector3(-CELL_SIZE / 2, 0, -CELL_SIZE / 2)
+];
+
+const activeBorder = new THREE.Line(
+  new THREE.BufferGeometry().setFromPoints(borderPoints),
+  new THREE.LineBasicMaterial({
+    color: 0xffffff,
+    transparent: true,
+    opacity: 0.86
+  })
+);
+activeBorder.position.y = 0.065;
+activeBorder.visible = false;
+scene.add(activeBorder);
+
+// Origin marker ring.
 const originRing = new THREE.Mesh(
   new THREE.RingGeometry(2.4, 2.5, 96),
   new THREE.MeshBasicMaterial({
     color: 0xffffff,
     transparent: true,
-    opacity: 0.42,
+    opacity: 0.34,
     side: THREE.DoubleSide
   })
 );
@@ -153,7 +207,332 @@ originRing.rotation.x = -Math.PI / 2;
 originRing.position.y = 0.025;
 scene.add(originRing);
 
-// UI buttons
+// Block builder data.
+const placedBlocks = [];
+const stackHeights = new Map();
+
+const blockGeometry = new THREE.BoxGeometry(BLOCK_SIZE_X, BLOCK_SIZE_Y, BLOCK_SIZE_Z);
+const blockMaterial = new THREE.MeshStandardMaterial({
+  color: 0xc8ccd2,
+  roughness: 0.72,
+  metalness: 0.02
+});
+
+const ghostMaterial = new THREE.MeshStandardMaterial({
+  color: 0xffd34d,
+  roughness: 0.65,
+  transparent: true,
+  opacity: 0.45,
+  depthWrite: false
+});
+
+const blockGhost = new THREE.Mesh(blockGeometry, ghostMaterial);
+blockGhost.visible = false;
+blockGhost.castShadow = false;
+blockGhost.receiveShadow = false;
+scene.add(blockGhost);
+
+// Raycasting.
+const raycaster = new THREE.Raycaster();
+const pointer = new THREE.Vector2();
+
+let pointerDown = null;
+let activeCell = null;
+let activeSnap = null;
+
+function getPointerNDC(event) {
+  const rect = renderer.domElement.getBoundingClientRect();
+
+  pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+  pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+
+  return pointer;
+}
+
+function worldPointToCell(point) {
+  if (
+    point.x < -HALF_GRID ||
+    point.x >= HALF_GRID ||
+    point.z < -HALF_GRID ||
+    point.z >= HALF_GRID
+  ) {
+    return null;
+  }
+
+  const col = Math.floor((point.x + HALF_GRID) / CELL_SIZE);
+  const row = Math.floor((point.z + HALF_GRID) / CELL_SIZE);
+
+  const centerX = -HALF_GRID + col * CELL_SIZE + CELL_SIZE / 2;
+  const centerZ = -HALF_GRID + row * CELL_SIZE + CELL_SIZE / 2;
+
+  return {
+    col,
+    row,
+    centerX,
+    centerZ,
+    worldX: point.x,
+    worldZ: point.z
+  };
+}
+
+function worldPointToSnap(point) {
+  if (
+    point.x < -HALF_GRID ||
+    point.x >= HALF_GRID ||
+    point.z < -HALF_GRID ||
+    point.z >= HALF_GRID
+  ) {
+    return null;
+  }
+
+  const snapX = Math.floor((point.x + HALF_GRID) / SNAP_SIZE);
+  const snapZ = Math.floor((point.z + HALF_GRID) / SNAP_SIZE);
+
+  const centerX = -HALF_GRID + snapX * SNAP_SIZE + SNAP_SIZE / 2;
+  const centerZ = -HALF_GRID + snapZ * SNAP_SIZE + SNAP_SIZE / 2;
+
+  const cellCol = Math.floor(snapX / SNAP_DIVISIONS_PER_CELL);
+  const cellRow = Math.floor(snapZ / SNAP_DIVISIONS_PER_CELL);
+  const subX = snapX % SNAP_DIVISIONS_PER_CELL;
+  const subZ = snapZ % SNAP_DIVISIONS_PER_CELL;
+
+  return {
+    snapX,
+    snapZ,
+    centerX,
+    centerZ,
+    cellCol,
+    cellRow,
+    subX,
+    subZ
+  };
+}
+
+function stackKeyFromSnap(snap) {
+  return `${snap.snapX}:${snap.snapZ}`;
+}
+
+function selectCell(cell) {
+  activeCell = cell;
+
+  activeSquare.position.x = cell.centerX;
+  activeSquare.position.z = cell.centerZ;
+  activeSquare.visible = true;
+
+  activeBorder.position.x = cell.centerX;
+  activeBorder.position.z = cell.centerZ;
+  activeBorder.visible = true;
+
+  activeSquareLabel.textContent = `Active square: X ${cell.col}, Z ${cell.row}`;
+}
+
+function selectGridSquareFromPointer(event) {
+  const hit = getSceneHitFromPointer(event);
+  if (!hit) return;
+
+  const cell = worldPointToCell(hit.point);
+  if (!cell) return;
+
+  selectCell(cell);
+}
+
+function getSceneHitFromPointer(event) {
+  getPointerNDC(event);
+  raycaster.setFromCamera(pointer, camera);
+
+  const targets = placedBlocks.length ? [...placedBlocks, ground] : [ground];
+  const hits = raycaster.intersectObjects(targets, false);
+  if (!hits.length) return null;
+
+  const firstHit = hits[0];
+
+  // If we hit a placed block, use its horizontal centre so stacking feels clean.
+  if (firstHit.object.userData?.type === 'block') {
+    return {
+      point: new THREE.Vector3(
+        firstHit.object.position.x,
+        firstHit.point.y,
+        firstHit.object.position.z
+      ),
+      object: firstHit.object
+    };
+  }
+
+  return firstHit;
+}
+
+function updateGhostFromPointer(event) {
+  if (currentTool !== ToolMode.BLOCK) {
+    blockGhost.visible = false;
+    return;
+  }
+
+  const hit = getSceneHitFromPointer(event);
+  if (!hit) {
+    blockGhost.visible = false;
+    return;
+  }
+
+  const snap = worldPointToSnap(hit.point);
+  if (!snap) {
+    blockGhost.visible = false;
+    return;
+  }
+
+  const key = stackKeyFromSnap(snap);
+  const stackHeight = stackHeights.get(key) ?? 0;
+
+  blockGhost.position.set(
+    snap.centerX,
+    stackHeight * BLOCK_SIZE_Y + BLOCK_SIZE_Y / 2,
+    snap.centerZ
+  );
+  blockGhost.visible = true;
+
+  activeSnap = snap;
+}
+
+function placeBlockFromPointer(event) {
+  const hit = getSceneHitFromPointer(event);
+  if (!hit) return;
+
+  const snap = worldPointToSnap(hit.point);
+  if (!snap) return;
+
+  const cell = {
+    col: snap.cellCol,
+    row: snap.cellRow,
+    centerX: -HALF_GRID + snap.cellCol * CELL_SIZE + CELL_SIZE / 2,
+    centerZ: -HALF_GRID + snap.cellRow * CELL_SIZE + CELL_SIZE / 2
+  };
+
+  selectCell(cell);
+
+  const key = stackKeyFromSnap(snap);
+  const stackHeight = stackHeights.get(key) ?? 0;
+
+  const block = new THREE.Mesh(blockGeometry, blockMaterial.clone());
+  block.position.set(
+    snap.centerX,
+    stackHeight * BLOCK_SIZE_Y + BLOCK_SIZE_Y / 2,
+    snap.centerZ
+  );
+
+  block.castShadow = true;
+  block.receiveShadow = true;
+  block.userData = {
+    type: 'block',
+    snapX: snap.snapX,
+    snapZ: snap.snapZ,
+    stackIndex: stackHeight,
+    cellCol: snap.cellCol,
+    cellRow: snap.cellRow
+  };
+
+  scene.add(block);
+  placedBlocks.push(block);
+
+  stackHeights.set(key, stackHeight + 1);
+
+  activeSnap = snap;
+  activeSquareLabel.textContent =
+    `Block placed: cell ${snap.cellCol}, ${snap.cellRow} · mini ${snap.subX + 1}/5, ${snap.subZ + 1}/5 · row ${stackHeight + 1}`;
+
+  updateGhostFromPointer(event);
+}
+
+function setTool(tool) {
+  currentTool = tool;
+
+  const isBlock = currentTool === ToolMode.BLOCK;
+  blockToolBtn.classList.toggle('active', isBlock);
+  blockGhost.visible = false;
+
+  toolStatusLabel.textContent = isBlock
+    ? 'Tool: Add > Mesh > Block'
+    : 'Tool: Select';
+}
+
+function clearBlocks() {
+  for (const block of placedBlocks) {
+    scene.remove(block);
+    block.geometry.dispose();
+    block.material.dispose();
+  }
+
+  placedBlocks.length = 0;
+  stackHeights.clear();
+  blockGhost.visible = false;
+  activeSquareLabel.textContent = 'Blocks cleared';
+}
+
+// Canvas pointer events.
+renderer.domElement.addEventListener('pointerdown', (event) => {
+  pointerDown = {
+    x: event.clientX,
+    y: event.clientY,
+    time: performance.now(),
+    pointerId: event.pointerId
+  };
+});
+
+renderer.domElement.addEventListener('pointermove', (event) => {
+  updateGhostFromPointer(event);
+});
+
+renderer.domElement.addEventListener('pointerup', (event) => {
+  if (!pointerDown || pointerDown.pointerId !== event.pointerId) return;
+
+  const dx = event.clientX - pointerDown.x;
+  const dy = event.clientY - pointerDown.y;
+  const distance = Math.sqrt(dx * dx + dy * dy);
+  const elapsed = performance.now() - pointerDown.time;
+
+  pointerDown = null;
+
+  // Treat it as a tap only if the finger/mouse did not drag much.
+  if (distance <= 8 && elapsed < 450) {
+    if (currentTool === ToolMode.BLOCK) {
+      placeBlockFromPointer(event);
+    } else {
+      selectGridSquareFromPointer(event);
+    }
+  }
+});
+
+// Tool panel.
+function openTools() {
+  toolsPanel.classList.add('open');
+}
+
+function closeTools() {
+  toolsPanel.classList.remove('open');
+}
+
+toolsToggleBtn.addEventListener('click', openTools);
+closeToolsBtn.addEventListener('click', closeTools);
+
+blockToolBtn.addEventListener('click', () => {
+  setTool(ToolMode.BLOCK);
+  closeTools();
+});
+
+cancelToolBtn.addEventListener('click', () => {
+  setTool(ToolMode.SELECT);
+});
+
+clearBlocksBtn.addEventListener('click', () => {
+  clearBlocks();
+});
+
+// Stop UI taps from falling through to the Three.js canvas.
+for (const element of [toolsToggleBtn, toolsPanel]) {
+  element.addEventListener('pointerdown', (event) => event.stopPropagation());
+  element.addEventListener('pointerup', (event) => event.stopPropagation());
+  element.addEventListener('pointermove', (event) => event.stopPropagation());
+}
+
+// Top HUD buttons.
 document.querySelector('#resetCameraBtn').addEventListener('click', () => {
   camera.position.set(18, 14, 18);
   controls.target.set(0, 0, 0);
@@ -170,6 +549,8 @@ document.querySelector('#toggleGridBtn').addEventListener('click', () => {
   grid.visible = !grid.visible;
   axes.visible = grid.visible;
   originRing.visible = grid.visible;
+  activeSquare.visible = grid.visible && activeCell !== null;
+  activeBorder.visible = grid.visible && activeCell !== null;
 });
 
 // Resize handling for iPhone rotation / browser chrome changes.
@@ -187,11 +568,42 @@ function resize() {
 window.addEventListener('resize', resize);
 window.addEventListener('orientationchange', resize);
 
-// Animation loop
+// Expose a tiny debug API for later game/editor features.
+window.theSandBox = {
+  getActiveCell: () => activeCell,
+  getActiveSnap: () => activeSnap,
+  getBlocks: () => placedBlocks.map((block) => ({
+    position: block.position.toArray(),
+    ...block.userData
+  })),
+  clearBlocks,
+  setTool,
+  selectCellByIndex: (col, row) => {
+    if (
+      col < 0 ||
+      row < 0 ||
+      col >= GRID_DIVISIONS ||
+      row >= GRID_DIVISIONS
+    ) {
+      console.warn('Cell outside grid.');
+      return;
+    }
+
+    selectCell({
+      col,
+      row,
+      centerX: -HALF_GRID + col * CELL_SIZE + CELL_SIZE / 2,
+      centerZ: -HALF_GRID + row * CELL_SIZE + CELL_SIZE / 2
+    });
+  }
+};
+
+// Animation loop.
 function animate() {
   controls.update();
   renderer.render(scene, camera);
   requestAnimationFrame(animate);
 }
 
+setTool(ToolMode.SELECT);
 animate();

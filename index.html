@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
   <meta name="theme-color" content="#111827" />
-  <title>Unity Style Three.js Grid Environment</title>
+  <title>The SandBox</title>
   <link rel="stylesheet" href="./styles.css" />
 
   <!-- Three.js CDN imports. Works on GitHub Pages with no build step. -->
@@ -20,10 +20,42 @@
 <body>
   <div id="app"></div>
 
+  <button id="toolsToggleBtn" class="tools-toggle">Tools</button>
+
+  <aside id="toolsPanel" class="tools-panel" aria-label="Tools panel">
+    <div class="panel-header">
+      <div>
+        <strong>Tools</strong>
+        <span>The SandBox builder</span>
+      </div>
+      <button id="closeToolsBtn" class="icon-btn" aria-label="Close tools">×</button>
+    </div>
+
+    <div class="tool-section">
+      <div class="breadcrumb">Add &gt; Mesh</div>
+
+      <button id="blockToolBtn" class="tool-card">
+        <strong>Block</strong>
+        <span>0.2m snap block · 5 high = 1m</span>
+      </button>
+    </div>
+
+    <div class="tool-section">
+      <button id="cancelToolBtn" class="secondary-btn">Cancel active tool</button>
+      <button id="clearBlocksBtn" class="danger-btn">Clear blocks</button>
+    </div>
+
+    <div class="tool-note">
+      <strong>Block snap</strong>
+      <p>Each 1m grid square is split into 5 mini-slots. Tap to place. Tap the same mini-slot again to stack upward.</p>
+    </div>
+  </aside>
+
   <div class="hud">
     <div>
-      <strong>Unity-style Three.js Scene</strong>
-      <span>100m grid · mobile ready</span>
+      <strong>The SandBox</strong>
+      <span id="activeSquareLabel">Tap a grid square</span>
+      <span id="toolStatusLabel">Tool: Select</span>
     </div>
 
     <div class="buttons">
@@ -34,8 +66,9 @@
   </div>
 
   <div class="touch-help">
-    <span>1 finger: orbit</span>
-    <span>2 fingers: zoom / pan</span>
+    <span>Tap: select/place</span>
+    <span>Drag: orbit</span>
+    <span>Pinch: zoom</span>
   </div>
 
   <script type="module" src="./main.js"></script>
