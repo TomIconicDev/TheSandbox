@@ -13,32 +13,52 @@ A Unity-style Three.js grid environment for GitHub Pages and iPhone.
 - Tap a grid square to make it active
 - Slide-out **Tools** sidebar
 - **Add > Mesh > Block** tool
-- Tap to place snap blocks
-- Blocks stack upward
+- Brick-shaped block placement
+- Tap the same brick slot to stack upward
 - Orbit / pinch / pan touch controls
 - Reset, top view, and grid toggle buttons
 - No build step needed
 
-## Block snap system
+## Brick block size
 
-The grid uses a simple Unity-style metre scale:
-
-```text
-1 normal grid square = 1m x 1m
-1 square is split into 5 mini-slots per direction
-1 snap step = 0.2m
-1 block = 0.2m x 0.2m x 0.2m
-```
-
-That means:
+The block is now more like a brick instead of a mini cube:
 
 ```text
-5 blocks wide = 1m
-5 blocks deep = 1m
-5 blocks high = 1m
+X length = 0.5m
+Y height = 0.125m
+Z depth  = 0.25m
 ```
 
-So if you fill a 5 x 5 footprint and stack it 5 rows high, it forms one solid 1m cube.
+That means one perfect 1m cube can be made from:
+
+```text
+2 bricks along X
+4 bricks along Z
+8 bricks high
+```
+
+So a 1m cube is:
+
+```text
+2 × 4 × 8 = 64 brick blocks
+```
+
+## Code values
+
+In `main.js`:
+
+```js
+const SNAP_DIVISIONS_PER_CELL = 8;
+const SNAP_SIZE = CELL_SIZE / SNAP_DIVISIONS_PER_CELL;
+
+const BLOCK_UNITS_X = 4; // 0.5m
+const BLOCK_UNITS_Y = 1; // 0.125m
+const BLOCK_UNITS_Z = 2; // 0.25m
+
+const BLOCK_SIZE_X = SNAP_SIZE * BLOCK_UNITS_X;
+const BLOCK_SIZE_Y = SNAP_SIZE * BLOCK_UNITS_Y;
+const BLOCK_SIZE_Z = SNAP_SIZE * BLOCK_UNITS_Z;
+```
 
 ## Files
 
@@ -71,31 +91,11 @@ Open the browser console and use:
 
 ```js
 theSandBox.getActiveCell()
-theSandBox.getActiveSnap()
+theSandBox.getActiveBrickSlot()
+theSandBox.getBlockSize()
 theSandBox.getBlocks()
 theSandBox.clearBlocks()
 theSandBox.setTool('block')
 theSandBox.setTool('select')
 theSandBox.selectCellByIndex(50, 50)
-```
-
-## Changing block size later
-
-In `main.js`, the block size is controlled here:
-
-```js
-const SNAP_DIVISIONS_PER_CELL = 5;
-const SNAP_SIZE = CELL_SIZE / SNAP_DIVISIONS_PER_CELL;
-
-const BLOCK_SIZE_X = SNAP_SIZE;
-const BLOCK_SIZE_Y = SNAP_SIZE;
-const BLOCK_SIZE_Z = SNAP_SIZE;
-```
-
-For a brick shape like `0.4 x 0.2 x 0.2`, change:
-
-```js
-const BLOCK_SIZE_X = SNAP_SIZE * 2;
-const BLOCK_SIZE_Y = SNAP_SIZE;
-const BLOCK_SIZE_Z = SNAP_SIZE;
 ```

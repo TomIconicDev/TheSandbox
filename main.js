@@ -10,11 +10,16 @@ import { Sky } from 'three/addons/objects/Sky.js';
   - 1 Three.js unit = 1 Unity-style metre.
   - Main grid is 100m x 100m.
   - Each normal grid square is 1m x 1m.
-  - The Block tool divides each 1m square into 5 snap points.
-  - So each Block is 0.2m x 0.2m x 0.2m.
-  - 5 blocks wide, 5 blocks deep, and 5 blocks high = one solid 1m cube.
 
-  If you want brick proportions later, change BLOCK_SIZE_X to 0.4 while keeping SNAP_SIZE at 0.2.
+  Brick block size:
+  - X length: 0.5m
+  - Y height: 0.125m
+  - Z depth:  0.25m
+
+  This means one perfect 1m cube can be built from:
+  - 2 bricks along X
+  - 4 bricks along Z
+  - 8 rows high
 */
 
 const GRID_SIZE = 100;
@@ -22,12 +27,18 @@ const GRID_DIVISIONS = 100;
 const CELL_SIZE = GRID_SIZE / GRID_DIVISIONS;
 const HALF_GRID = GRID_SIZE / 2;
 
-const SNAP_DIVISIONS_PER_CELL = 5;
+// 8 snap steps per metre gives a clean 0.125m vertical row height.
+const SNAP_DIVISIONS_PER_CELL = 8;
 const SNAP_SIZE = CELL_SIZE / SNAP_DIVISIONS_PER_CELL;
 
-const BLOCK_SIZE_X = SNAP_SIZE;
-const BLOCK_SIZE_Y = SNAP_SIZE;
-const BLOCK_SIZE_Z = SNAP_SIZE;
+// Brick/block dimensions.
+const BLOCK_UNITS_X = 4; // 4 × 0.125 = 0.5m
+const BLOCK_UNITS_Y = 1; // 1 × 0.125 = 0.125m
+const BLOCK_UNITS_Z = 2; // 2 × 0.125 = 0.25m
+
+const BLOCK_SIZE_X = SNAP_SIZE * BLOCK_UNITS_X;
+const BLOCK_SIZE_Y = SNAP_SIZE * BLOCK_UNITS_Y;
+const BLOCK_SIZE_Z = SNAP_SIZE * BLOCK_UNITS_Z;
 
 const ToolMode = {
   SELECT: 'select',
@@ -50,7 +61,7 @@ const clearBlocksBtn = document.querySelector('#clearBlocksBtn');
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xbfd7ff);
 
-// Camera
+// Camera.
 const camera = new THREE.PerspectiveCamera(
   60,
   window.innerWidth / window.innerHeight,
@@ -59,7 +70,7 @@ const camera = new THREE.PerspectiveCamera(
 );
 camera.position.set(18, 14, 18);
 
-// Renderer
+// Renderer.
 const renderer = new THREE.WebGLRenderer({
   antialias: true,
   powerPreference: 'high-performance'
@@ -76,10 +87,6 @@ renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 app.appendChild(renderer.domElement);
 
 // Mobile-friendly orbit controls.
-// iPhone gestures:
-// - 1 finger drag = orbit
-// - pinch = zoom
-// - 2 fingers = pan
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.target.set(0, 0, 0);
 controls.enableDamping = true;
@@ -90,13 +97,12 @@ controls.maxDistance = 160;
 controls.maxPolarAngle = Math.PI * 0.48;
 controls.update();
 
-// Unity-like grid
+// Unity-like grid.
 const grid = new THREE.GridHelper(GRID_SIZE, GRID_DIVISIONS, 0x444444, 0x888888);
 grid.position.y = 0.015;
 scene.add(grid);
 
-// Ground plane below the grid.
-// This is also what the raycaster hits when you tap.
+// Ground plane. Raycaster hits this when placing/selecting.
 const ground = new THREE.Mesh(
   new THREE.PlaneGeometry(GRID_SIZE, GRID_SIZE),
   new THREE.MeshStandardMaterial({
@@ -110,12 +116,12 @@ ground.position.y = 0;
 ground.receiveShadow = true;
 scene.add(ground);
 
-// World axes marker: red X, green Y, blue Z.
+// World axes marker.
 const axes = new THREE.AxesHelper(5);
 axes.position.y = 0.03;
 scene.add(axes);
 
-// Default sky using Three.js Sky shader.
+// Default sky.
 const sky = new Sky();
 sky.scale.setScalar(450000);
 scene.add(sky);
@@ -141,7 +147,7 @@ function setupSky() {
 
 setupSky();
 
-// Lighting
+// Lighting.
 const hemiLight = new THREE.HemisphereLight(0xffffff, 0x5f6670, 1.45);
 scene.add(hemiLight);
 
@@ -238,7 +244,7 @@ const pointer = new THREE.Vector2();
 
 let pointerDown = null;
 let activeCell = null;
-let activeSnap = null;
+let activeBrickSlot = null;
 
 function getPointerNDC(event) {
   const rect = renderer.domElement.getBoundingClientRect();
@@ -275,7 +281,7 @@ function worldPointToCell(point) {
   };
 }
 
-function worldPointToSnap(point) {
+function worldPointToBrickSlot(point) {
   if (
     point.x < -HALF_GRID ||
     point.x >= HALF_GRID ||
@@ -285,31 +291,40 @@ function worldPointToSnap(point) {
     return null;
   }
 
-  const snapX = Math.floor((point.x + HALF_GRID) / SNAP_SIZE);
-  const snapZ = Math.floor((point.z + HALF_GRID) / SNAP_SIZE);
+  const relativeX = point.x + HALF_GRID;
+  const relativeZ = point.z + HALF_GRID;
 
-  const centerX = -HALF_GRID + snapX * SNAP_SIZE + SNAP_SIZE / 2;
-  const centerZ = -HALF_GRID + snapZ * SNAP_SIZE + SNAP_SIZE / 2;
+  // Non-overlapping brick slots:
+  // 2 brick slots per 1m on X, 4 brick slots per 1m on Z.
+  const brickSlotX = Math.floor(relativeX / BLOCK_SIZE_X);
+  const brickSlotZ = Math.floor(relativeZ / BLOCK_SIZE_Z);
 
-  const cellCol = Math.floor(snapX / SNAP_DIVISIONS_PER_CELL);
-  const cellRow = Math.floor(snapZ / SNAP_DIVISIONS_PER_CELL);
-  const subX = snapX % SNAP_DIVISIONS_PER_CELL;
-  const subZ = snapZ % SNAP_DIVISIONS_PER_CELL;
+  const anchorX = brickSlotX * BLOCK_SIZE_X;
+  const anchorZ = brickSlotZ * BLOCK_SIZE_Z;
+
+  const centerX = -HALF_GRID + anchorX + BLOCK_SIZE_X / 2;
+  const centerZ = -HALF_GRID + anchorZ + BLOCK_SIZE_Z / 2;
+
+  const cellCol = Math.floor((centerX + HALF_GRID) / CELL_SIZE);
+  const cellRow = Math.floor((centerZ + HALF_GRID) / CELL_SIZE);
+
+  const slotInCellX = brickSlotX % 2;
+  const slotInCellZ = brickSlotZ % 4;
 
   return {
-    snapX,
-    snapZ,
+    brickSlotX,
+    brickSlotZ,
     centerX,
     centerZ,
     cellCol,
     cellRow,
-    subX,
-    subZ
+    slotInCellX,
+    slotInCellZ
   };
 }
 
-function stackKeyFromSnap(snap) {
-  return `${snap.snapX}:${snap.snapZ}`;
+function stackKeyFromBrickSlot(slot) {
+  return `${slot.brickSlotX}:${slot.brickSlotZ}`;
 }
 
 function selectCell(cell) {
@@ -326,16 +341,6 @@ function selectCell(cell) {
   activeSquareLabel.textContent = `Active square: X ${cell.col}, Z ${cell.row}`;
 }
 
-function selectGridSquareFromPointer(event) {
-  const hit = getSceneHitFromPointer(event);
-  if (!hit) return;
-
-  const cell = worldPointToCell(hit.point);
-  if (!cell) return;
-
-  selectCell(cell);
-}
-
 function getSceneHitFromPointer(event) {
   getPointerNDC(event);
   raycaster.setFromCamera(pointer, camera);
@@ -346,7 +351,7 @@ function getSceneHitFromPointer(event) {
 
   const firstHit = hits[0];
 
-  // If we hit a placed block, use its horizontal centre so stacking feels clean.
+  // If tapping a block, use its centre point so it stacks in that exact slot.
   if (firstHit.object.userData?.type === 'block') {
     return {
       point: new THREE.Vector3(
@@ -361,6 +366,16 @@ function getSceneHitFromPointer(event) {
   return firstHit;
 }
 
+function selectGridSquareFromPointer(event) {
+  const hit = getSceneHitFromPointer(event);
+  if (!hit) return;
+
+  const cell = worldPointToCell(hit.point);
+  if (!cell) return;
+
+  selectCell(cell);
+}
+
 function updateGhostFromPointer(event) {
   if (currentTool !== ToolMode.BLOCK) {
     blockGhost.visible = false;
@@ -373,60 +388,67 @@ function updateGhostFromPointer(event) {
     return;
   }
 
-  const snap = worldPointToSnap(hit.point);
-  if (!snap) {
+  const slot = worldPointToBrickSlot(hit.point);
+  if (!slot) {
     blockGhost.visible = false;
     return;
   }
 
-  const key = stackKeyFromSnap(snap);
+  const key = stackKeyFromBrickSlot(slot);
   const stackHeight = stackHeights.get(key) ?? 0;
 
   blockGhost.position.set(
-    snap.centerX,
+    slot.centerX,
     stackHeight * BLOCK_SIZE_Y + BLOCK_SIZE_Y / 2,
-    snap.centerZ
+    slot.centerZ
   );
   blockGhost.visible = true;
 
-  activeSnap = snap;
+  activeBrickSlot = slot;
 }
 
 function placeBlockFromPointer(event) {
   const hit = getSceneHitFromPointer(event);
   if (!hit) return;
 
-  const snap = worldPointToSnap(hit.point);
-  if (!snap) return;
+  const slot = worldPointToBrickSlot(hit.point);
+  if (!slot) return;
 
   const cell = {
-    col: snap.cellCol,
-    row: snap.cellRow,
-    centerX: -HALF_GRID + snap.cellCol * CELL_SIZE + CELL_SIZE / 2,
-    centerZ: -HALF_GRID + snap.cellRow * CELL_SIZE + CELL_SIZE / 2
+    col: slot.cellCol,
+    row: slot.cellRow,
+    centerX: -HALF_GRID + slot.cellCol * CELL_SIZE + CELL_SIZE / 2,
+    centerZ: -HALF_GRID + slot.cellRow * CELL_SIZE + CELL_SIZE / 2
   };
 
   selectCell(cell);
 
-  const key = stackKeyFromSnap(snap);
+  const key = stackKeyFromBrickSlot(slot);
   const stackHeight = stackHeights.get(key) ?? 0;
 
   const block = new THREE.Mesh(blockGeometry, blockMaterial.clone());
   block.position.set(
-    snap.centerX,
+    slot.centerX,
     stackHeight * BLOCK_SIZE_Y + BLOCK_SIZE_Y / 2,
-    snap.centerZ
+    slot.centerZ
   );
 
   block.castShadow = true;
   block.receiveShadow = true;
   block.userData = {
     type: 'block',
-    snapX: snap.snapX,
-    snapZ: snap.snapZ,
+    brickSlotX: slot.brickSlotX,
+    brickSlotZ: slot.brickSlotZ,
     stackIndex: stackHeight,
-    cellCol: snap.cellCol,
-    cellRow: snap.cellRow
+    cellCol: slot.cellCol,
+    cellRow: slot.cellRow,
+    slotInCellX: slot.slotInCellX,
+    slotInCellZ: slot.slotInCellZ,
+    size: {
+      x: BLOCK_SIZE_X,
+      y: BLOCK_SIZE_Y,
+      z: BLOCK_SIZE_Z
+    }
   };
 
   scene.add(block);
@@ -434,9 +456,9 @@ function placeBlockFromPointer(event) {
 
   stackHeights.set(key, stackHeight + 1);
 
-  activeSnap = snap;
+  activeBrickSlot = slot;
   activeSquareLabel.textContent =
-    `Block placed: cell ${snap.cellCol}, ${snap.cellRow} · mini ${snap.subX + 1}/5, ${snap.subZ + 1}/5 · row ${stackHeight + 1}`;
+    `Brick placed: cell ${slot.cellCol}, ${slot.cellRow} · slot ${slot.slotInCellX + 1}/2, ${slot.slotInCellZ + 1}/4 · row ${stackHeight + 1}/8`;
 
   updateGhostFromPointer(event);
 }
@@ -456,7 +478,6 @@ function setTool(tool) {
 function clearBlocks() {
   for (const block of placedBlocks) {
     scene.remove(block);
-    block.geometry.dispose();
     block.material.dispose();
   }
 
@@ -571,7 +592,12 @@ window.addEventListener('orientationchange', resize);
 // Expose a tiny debug API for later game/editor features.
 window.theSandBox = {
   getActiveCell: () => activeCell,
-  getActiveSnap: () => activeSnap,
+  getActiveBrickSlot: () => activeBrickSlot,
+  getBlockSize: () => ({
+    x: BLOCK_SIZE_X,
+    y: BLOCK_SIZE_Y,
+    z: BLOCK_SIZE_Z
+  }),
   getBlocks: () => placedBlocks.map((block) => ({
     position: block.position.toArray(),
     ...block.userData
