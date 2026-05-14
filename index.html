@@ -1,54 +1,15 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
-  <meta name="theme-color" content="#10151b" />
-  <title>Orbital Haulers Pocket</title>
-  <link rel="stylesheet" href="./style.css" />
-</head>
-<body>
-  <div id="game"></div>
-
-  <header class="topbar">
-    <div>
-      <strong>Orbital Haulers Pocket</strong>
-      <span id="statusLine">Booting yard systems...</span>
-    </div>
-    <button id="resetBtn" class="ghost">Reset</button>
-  </header>
-
-  <section class="hud-card stats">
-    <div><span>Credits</span><b id="credits">0</b></div>
-    <div><span>Cargo</span><b id="cargo">0</b></div>
-    <div><span>Pad</span><b id="padLevel">1</b></div>
-    <div><span>Loaders</span><b id="loaderLevel">0</b></div>
-  </section>
-
-  <nav class="bottom-actions" aria-label="Game actions">
-    <button id="upgradePadBtn">
-      <b>Upgrade Pad</b>
-      <span id="upgradePadCost">£75</span>
-    </button>
-    <button id="hireLoaderBtn">
-      <b>Hire Loader</b>
-      <span id="hireLoaderCost">£60</span>
-    </button>
-    <button id="expandYardBtn">
-      <b>Expand Yard</b>
-      <span id="expandYardCost">£120</span>
-    </button>
-  </nav>
-
-  <div id="toast" class="toast" hidden></div>
-
-  <script type="importmap">
-    {
-      "imports": {
-        "three": "https://cdn.jsdelivr.net/npm/three@0.184.0/build/three.module.js"
-      }
-    }
-  </script>
-  <script type="module" src="./src/main.js"></script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#0f172a" />
+    <link rel="manifest" href="/gmail-swipe-cleaner/manifest.webmanifest" />
+    <title>Gmail Swipe Cleaner</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+  </body>
 </html>
