@@ -1,1 +1,9 @@
-
+{
+  "name": "Gmail Swipe Cleaner",
+  "short_name": "Gmail Cleaner",
+  "start_url": "/gmail-swipe-cleaner/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#0f172a",
+  "icons": []
+}
