@@ -14,6 +14,7 @@ index.html
 styles.css
 app.js
 gmail.js
+config.js
 manifest.webmanifest
 favicon.svg
 README.md
@@ -80,3 +81,24 @@ from:noreply older_than:2y
 ```
 
 Start with Max Messages set to 1000 before scanning everything.
+
+
+## Simple login setup
+
+This version hides the Client ID field and shows a normal **Continue with Google** button.
+
+Before uploading, open:
+
+```text
+config.js
+```
+
+and replace:
+
+```text
+PASTE_YOUR_WEB_CLIENT_ID_HERE
+```
+
+with your Google OAuth Web Client ID.
+
+The Web Client ID is safe to be public in browser apps. It is not a password or secret.

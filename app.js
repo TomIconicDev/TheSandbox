@@ -7,10 +7,9 @@ import {
   moveSenderToBin
 } from './gmail.js'
 
-const savedClientIdKey = 'gmailSwipeCleaner.clientId'
+import { GOOGLE_CLIENT_ID } from './config.js'
 
 const els = {
-  clientId: document.querySelector('#clientId'),
   connectBtn: document.querySelector('#connectBtn'),
   signOutBtn: document.querySelector('#signOutBtn'),
   scanBtn: document.querySelector('#scanBtn'),
@@ -29,7 +28,6 @@ let accessToken = ''
 let senders = []
 let busy = false
 
-els.clientId.value = localStorage.getItem(savedClientIdKey) || ''
 
 function setStatus(message) {
   els.status.textContent = message
@@ -42,7 +40,7 @@ function setProgress(message = '') {
 function setBusy(value) {
   busy = value
   els.scanBtn.disabled = !accessToken || busy
-  els.connectBtn.disabled = busy || !els.clientId.value.trim()
+  els.connectBtn.disabled = busy
 }
 
 function showConnectedState() {
@@ -86,13 +84,11 @@ function waitForGoogle(maxMs = 6000) {
 }
 
 async function connectGmail() {
-  const clientId = els.clientId.value.trim()
-  if (!clientId) {
-    setStatus('Paste your Google OAuth Web Client ID first.')
+  const clientId = GOOGLE_CLIENT_ID.trim()
+  if (!clientId || clientId === 'PASTE_YOUR_WEB_CLIENT_ID_HERE') {
+    setStatus('Missing Google Client ID. Open config.js and paste your Web Client ID first.')
     return
   }
-
-  localStorage.setItem(savedClientIdKey, clientId)
 
   try {
     await waitForGoogle()
@@ -338,11 +334,6 @@ async function binThisSender(sender) {
     setBusy(false)
   }
 }
-
-els.clientId.addEventListener('input', () => {
-  localStorage.setItem(savedClientIdKey, els.clientId.value.trim())
-  setBusy(false)
-})
 
 els.connectBtn.addEventListener('click', connectGmail)
 els.signOutBtn.addEventListener('click', signOut)

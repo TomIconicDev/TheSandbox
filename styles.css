@@ -47,6 +47,24 @@ button.primary {
   box-shadow: 0 14px 35px rgba(37, 99, 235, .23);
 }
 
+button.googleBtn {
+  background: #f8fafc;
+  color: #0f172a;
+  box-shadow: 0 14px 35px rgba(255, 255, 255, .12);
+}
+
+button.googleBtn::before {
+  content: "G";
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-grid;
+  place-items: center;
+  background: #fff;
+  color: #2563eb;
+  font-weight: 1000;
+}
+
 button.ghost {
   background: rgba(255,255,255,.07);
 }
