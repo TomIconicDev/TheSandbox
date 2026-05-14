@@ -1,77 +1,82 @@
-# Gmail Swipe Cleaner
+# Gmail Swipe Cleaner — root static version
 
-An iPhone-friendly GitHub Pages web app that connects to Gmail with Google OAuth, scans message sender metadata, groups emails by sender, then lets you:
+This version is designed for uploading from your phone directly into the **root of a GitHub repo**.
 
-- swipe right / tap to archive all emails from that sender
-- swipe left / tap to move all emails from that sender to Gmail Bin
-- filter sender cards
-- scan by Gmail search query, for example `older_than:5y -is:starred`
+No Vite.  
+No React build.  
+No `npm install`.  
+No `dist` folder.
 
-## Safety model
-
-This starter app intentionally does **not** call Gmail's permanent `batchDelete` endpoint.
-
-The "Move to Bin" action uses `users.messages.batchModify` to add the `TRASH` label and remove `INBOX`, so it behaves more like Gmail's normal delete flow.
-
-## Google Cloud setup
-
-1. Open Google Cloud Console.
-2. Create a project.
-3. Enable the Gmail API.
-4. Configure OAuth consent.
-5. Create an OAuth Client ID.
-6. Application type: **Web application**.
-7. Add Authorized JavaScript origins:
-   - local dev: `http://localhost:5173`
-   - GitHub Pages: `https://YOUR_GITHUB_USERNAME.github.io`
-8. Copy the Web Client ID.
-9. Paste it into the app.
-
-## Local dev
-
-```bash
-npm install
-npm run dev
-```
-
-Open the local Vite URL on your computer or iPhone on the same network.
-
-## Deploy to GitHub Pages
-
-This Vite config assumes the repo is called:
+Upload these files directly into the root of your repo:
 
 ```text
-gmail-swipe-cleaner
+index.html
+styles.css
+app.js
+gmail.js
+manifest.webmanifest
+favicon.svg
+README.md
 ```
 
-If you rename the repo, update `base` in `vite.config.js` and the manifest path in `index.html`.
+## GitHub Pages setup
 
-Build:
+1. Open your GitHub repo.
+2. Upload all files into the repo root.
+3. Go to **Settings > Pages**.
+4. Source: **Deploy from a branch**.
+5. Branch: `main`.
+6. Folder: `/ root`.
+7. Save.
 
-```bash
-npm run build
+Your app should load at:
+
+```text
+https://YOUR_USERNAME.github.io/
 ```
 
-Deploy `dist/` using GitHub Pages, or add your preferred Pages workflow.
+if the repo is named:
 
-## Recommended first scan queries
+```text
+YOUR_USERNAME.github.io
+```
 
-Start small:
+or:
+
+```text
+https://YOUR_USERNAME.github.io/REPO_NAME/
+```
+
+if this is a normal project repo.
+
+## Google Cloud OAuth setup
+
+1. Go to Google Cloud Console.
+2. Create/select a project.
+3. Enable the **Gmail API**.
+4. Configure OAuth consent.
+5. Create OAuth Client ID.
+6. Choose **Web application**.
+7. Add authorised JavaScript origin:
+   - `https://YOUR_USERNAME.github.io`
+
+Do not include the repo path in the origin. Origins only include scheme + domain.
+
+Example:
+
+```text
+https://tomiconicdev.github.io
+```
+
+Then copy the Web Client ID into the app.
+
+## Recommended first queries
 
 ```text
 category:promotions older_than:1y
-```
-
-Then:
-
-```text
 older_than:5y -is:starred
-```
-
-To scan everything except chats:
-
-```text
+from:noreply older_than:2y
 -in:chats
 ```
 
-Set max messages to `0` for all, but test with 500 or 5000 first.
+Start with Max Messages set to 1000 before scanning everything.

@@ -1,15 +1,79 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <meta name="theme-color" content="#0f172a" />
-    <link rel="manifest" href="/gmail-swipe-cleaner/manifest.webmanifest" />
-    <title>Gmail Swipe Cleaner</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
-  </head>
-  <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
-  </body>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#08111f" />
+  <title>Gmail Swipe Cleaner</title>
+
+  <!-- Everything is root-relative/relative so this works when uploaded straight to repo root. -->
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="icon" href="./favicon.svg" />
+  <link rel="stylesheet" href="./styles.css" />
+
+  <!-- Google browser OAuth -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div>
+        <div class="pill">🔐 Browser-only Gmail cleaner</div>
+        <h1>Gmail Swipe Cleaner</h1>
+        <p>Scan Gmail by sender, then swipe right to archive or left to move a sender’s emails to Bin.</p>
+      </div>
+      <div class="logo">✉️</div>
+    </section>
+
+    <section class="panel">
+      <label>
+        Google OAuth Web Client ID
+        <input id="clientId" placeholder="1234567890-abc.apps.googleusercontent.com" autocomplete="off" />
+      </label>
+
+      <div class="row">
+        <button id="connectBtn" class="primary">Connect Gmail</button>
+        <button id="signOutBtn" class="ghost hidden">Sign out</button>
+      </div>
+
+      <div class="two">
+        <label>
+          Gmail search query
+          <input id="query" value="category:promotions older_than:1y" />
+        </label>
+
+        <label>
+          Max messages, 0 = all
+          <input id="maxMessages" type="number" min="0" value="1000" />
+        </label>
+      </div>
+
+      <button id="scanBtn" class="primary full" disabled>Scan Gmail</button>
+
+      <p id="status" class="status">Paste your Google OAuth Web Client ID, then connect Gmail.</p>
+      <p id="progress" class="progress"></p>
+    </section>
+
+    <section id="tools" class="toolbar hidden">
+      <div class="search">
+        <span>🔎</span>
+        <input id="filter" placeholder="Filter senders..." />
+      </div>
+      <span id="cardCount">0 cards</span>
+    </section>
+
+    <section id="cards" class="cards"></section>
+
+    <section class="help">
+      <h2>Good starter scans</h2>
+      <button class="queryPreset" data-query="category:promotions older_than:1y">Promotions older than 1 year</button>
+      <button class="queryPreset" data-query="older_than:5y -is:starred">Older than 5 years, not starred</button>
+      <button class="queryPreset" data-query="from:noreply older_than:2y">No-reply older than 2 years</button>
+      <button class="queryPreset" data-query="-in:chats">Everything except chats</button>
+    </section>
+  </main>
+
+  <script type="module" src="./gmail.js"></script>
+  <script type="module" src="./app.js"></script>
+</body>
 </html>
