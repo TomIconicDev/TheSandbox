@@ -1,104 +1,21 @@
-# Gmail Swipe Cleaner — root static version
+# Voxel Realms HD
 
-This version is designed for uploading from your phone directly into the **root of a GitHub repo**.
+A from-scratch browser voxel sandbox built with Three.js. Original game code and presentation; no Minecraft assets or code.
 
-No Vite.  
-No React build.  
-No `npm install`.  
-No `dist` folder.
+## Current playable build
 
-Upload these files directly into the root of your repo:
+Open `game.html` on GitHub Pages.
 
-```text
-index.html
-styles.css
-app.js
-gmail.js
-config.js
-manifest.webmanifest
-favicon.svg
-README.md
-```
+- Procedural terrain
+- Trees and multiple block types
+- First-person controls
+- Sprint + jump
+- Mine/place blocks
+- Hotbar selection
+- Dynamic lighting and shadows
+- Fog and filmic rendering
+- Responsive HUD
 
-## GitHub Pages setup
+## Roadmap
 
-1. Open your GitHub repo.
-2. Upload all files into the repo root.
-3. Go to **Settings > Pages**.
-4. Source: **Deploy from a branch**.
-5. Branch: `main`.
-6. Folder: `/ root`.
-7. Save.
-
-Your app should load at:
-
-```text
-https://YOUR_USERNAME.github.io/
-```
-
-if the repo is named:
-
-```text
-YOUR_USERNAME.github.io
-```
-
-or:
-
-```text
-https://YOUR_USERNAME.github.io/REPO_NAME/
-```
-
-if this is a normal project repo.
-
-## Google Cloud OAuth setup
-
-1. Go to Google Cloud Console.
-2. Create/select a project.
-3. Enable the **Gmail API**.
-4. Configure OAuth consent.
-5. Create OAuth Client ID.
-6. Choose **Web application**.
-7. Add authorised JavaScript origin:
-   - `https://YOUR_USERNAME.github.io`
-
-Do not include the repo path in the origin. Origins only include scheme + domain.
-
-Example:
-
-```text
-https://tomiconicdev.github.io
-```
-
-Then copy the Web Client ID into the app.
-
-## Recommended first queries
-
-```text
-category:promotions older_than:1y
-older_than:5y -is:starred
-from:noreply older_than:2y
--in:chats
-```
-
-Start with Max Messages set to 1000 before scanning everything.
-
-
-## Simple login setup
-
-This version hides the Client ID field and shows a normal **Continue with Google** button.
-
-Before uploading, open:
-
-```text
-config.js
-```
-
-and replace:
-
-```text
-PASTE_YOUR_WEB_CLIENT_ID_HERE
-```
-
-with your Google OAuth Web Client ID.
-
-The Web Client ID is safe to be public in browser apps. It is not a password or secret.
+Chunk streaming, greedy meshing, PBR materials, caves, ores, biomes, water, weather, inventory, crafting, tools, mobs, audio, save/load, controller/touch support and larger-world architecture.
