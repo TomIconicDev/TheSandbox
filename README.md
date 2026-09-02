@@ -1,104 +1,50 @@
-# Gmail Swipe Cleaner — root static version
+# Voxel Realms HD
 
-This version is designed for uploading from your phone directly into the **root of a GitHub repo**.
+A browser-based voxel sandbox prototype built for GitHub Pages with **Three.js**.
 
-No Vite.  
-No React build.  
-No `npm install`.  
-No `dist` folder.
+## Current prototype
 
-Upload these files directly into the root of your repo:
+- First-person 3D voxel world
+- Procedural terrain and trees
+- Grass, dirt, stone, sand, wood, leaves, planks and glass blocks
+- Mine blocks with left mouse
+- Place blocks with right mouse
+- WASD movement + mouse look
+- Jump and sprint
+- Number-key hotbar
+- Shadows, fog, ACES tone mapping and HDR-style exposure
+- Responsive HUD and loading screen
+- No build step required
 
-```text
-index.html
-styles.css
-app.js
-gmail.js
-config.js
-manifest.webmanifest
-favicon.svg
-README.md
-```
+## Run on GitHub Pages
 
-## GitHub Pages setup
+1. Merge the `minecraft-hd` branch into `main`, or use that branch for Pages.
+2. Open repository **Settings → Pages**.
+3. Choose **Deploy from a branch**.
+4. Select `main` and `/ (root)`.
+5. Save.
 
-1. Open your GitHub repo.
-2. Upload all files into the repo root.
-3. Go to **Settings > Pages**.
-4. Source: **Deploy from a branch**.
-5. Branch: `main`.
-6. Folder: `/ root`.
-7. Save.
+The game is static and imports Three.js from jsDelivr, so there is no npm install or bundler required.
 
-Your app should load at:
+## Roadmap
 
-```text
-https://YOUR_USERNAME.github.io/
-```
+This is the foundation rather than a claim of a full Minecraft clone. The next systems should be built in this order:
 
-if the repo is named:
+1. Chunk streaming + greedy meshing
+2. Texture atlas with high-resolution physically based materials
+3. Ambient occlusion and contact shadows
+4. Water with reflections/refraction
+5. Volumetric-looking fog, clouds and a day/night cycle
+6. Caves, ores, biomes and structures
+7. Collision against voxel terrain
+8. Inventory/crafting UI
+9. Health, hunger, tools and block hardness
+10. Animals, hostile mobs and basic AI
+11. Save/load worlds with IndexedDB
+12. Web Worker terrain generation
+13. WebGPU renderer path where supported
+14. Multiplayer backend (GitHub Pages alone cannot provide authoritative multiplayer)
 
-```text
-YOUR_USERNAME.github.io
-```
+## Important
 
-or:
-
-```text
-https://YOUR_USERNAME.github.io/REPO_NAME/
-```
-
-if this is a normal project repo.
-
-## Google Cloud OAuth setup
-
-1. Go to Google Cloud Console.
-2. Create/select a project.
-3. Enable the **Gmail API**.
-4. Configure OAuth consent.
-5. Create OAuth Client ID.
-6. Choose **Web application**.
-7. Add authorised JavaScript origin:
-   - `https://YOUR_USERNAME.github.io`
-
-Do not include the repo path in the origin. Origins only include scheme + domain.
-
-Example:
-
-```text
-https://tomiconicdev.github.io
-```
-
-Then copy the Web Client ID into the app.
-
-## Recommended first queries
-
-```text
-category:promotions older_than:1y
-older_than:5y -is:starred
-from:noreply older_than:2y
--in:chats
-```
-
-Start with Max Messages set to 1000 before scanning everything.
-
-
-## Simple login setup
-
-This version hides the Client ID field and shows a normal **Continue with Google** button.
-
-Before uploading, open:
-
-```text
-config.js
-```
-
-and replace:
-
-```text
-PASTE_YOUR_WEB_CLIENT_ID_HERE
-```
-
-with your Google OAuth Web Client ID.
-
-The Web Client ID is safe to be public in browser apps. It is not a password or secret.
+The goal is a **Minecraft-inspired voxel sandbox with original branding/assets**, not a redistribution of Mojang's copyrighted game assets, textures, sounds or code.
